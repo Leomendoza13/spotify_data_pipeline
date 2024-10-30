@@ -67,10 +67,26 @@ resource "null_resource" "create_dags_dir" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo mkdir -p /opt/airflow/dags",
-      "sudo chmod -R 755 /opt/airflow/dags",
-      "sudo chown -R ${var.ssh_user}:${var.ssh_user} /opt/airflow/dags"
+      "sudo mkdir -p /opt/airflow/dags /opt/airflow/config",
+      "sudo chmod -R 755 /opt/airflow/dags /opt/airflow/config",
+      "sudo chown -R ${var.ssh_user}:${var.ssh_user} /opt/airflow/dags /opt/airflow/config"
     ]
+
+    connection {
+      type        = "ssh"
+      user        = var.ssh_user
+      private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
+      host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+    }
+  }
+}
+
+resource "null_resource" "copy_ids_json" {
+  depends_on = [null_resource.create_dags_dir]
+
+  provisioner "file" {
+    source      = var.ids_path
+    destination = "/opt/airflow/config/ids.json"
 
     connection {
       type        = "ssh"

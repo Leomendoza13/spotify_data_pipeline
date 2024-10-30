@@ -3,9 +3,10 @@ from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from datetime import datetime, timedelta
 import requests
-import os
 from google.cloud import storage
 import json
+
+VARIABLE_FILE = "/opt/airflow/config/ids.json"
 
 # Define the DAG
 default_args = {
@@ -26,6 +27,13 @@ dag = DAG(
     catchup=False,
     is_paused_upon_creation=False,
 )
+
+def load_variables():
+    # Charger les variables depuis le fichier JSON
+    with open(VARIABLE_FILE) as f:
+        variables = json.load(f)
+    for key, value in variables.items():
+        Variable.set(key, value)
 
 # 1. Function to get token access
 def get_access_token(**kwargs):
@@ -95,21 +103,30 @@ def save_tracks_to_gcs(**kwargs):
         print(f"Données pour la playlist {playlist_id} chargées dans GCS sous le nom {filename}")
 
 # Task in Airflow
+
 t1 = PythonOperator(
+    task_id='load_variables',
+    python_callable=load_variables,
+    provide_context=True,
+    dag=dag,
+)
+
+
+t2 = PythonOperator(
     task_id='get_access_token',
     python_callable=get_access_token,
     provide_context=True,
     dag=dag,
 )
 
-t2 = PythonOperator(
+t3 = PythonOperator(
     task_id='get_top_50_country_ids',
     python_callable=get_top_50_country_ids,
     provide_context=True,
     dag=dag,
 )
 
-t3 = PythonOperator(
+t4 = PythonOperator(
     task_id='save_tracks_to_gcs',
     python_callable=save_tracks_to_gcs,
     provide_context=True,
@@ -117,4 +134,4 @@ t3 = PythonOperator(
 )
 
 # Define the order
-t1 >> t2 >> t3
+t1 >> t2 >> t3 >> t4
