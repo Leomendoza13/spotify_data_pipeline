@@ -1,5 +1,5 @@
 provider "google" {
-  project = "spotify-pipeline1" 
+  project = var.project_id
   region  = "europe-west9" 
 }
 
@@ -25,7 +25,7 @@ resource "google_service_account" "airflow_service_account" {
 
 # Assigns the storage admin role to the Airflow service account for bucket access
 resource "google_project_iam_member" "airflow_service_account_permissions" {
-  project = "spotify-pipeline1"
+  project = var.project_id
   role    = "roles/storage.admin" # ou "roles/bigquery.admin" si BigQuery est requis
   member  = "serviceAccount:${google_service_account.airflow_service_account.email}"
 }
@@ -68,7 +68,7 @@ resource "google_service_account" "sa" {
 
 # Grants storage admin permissions to the created service account
 resource "google_project_iam_member" "storage_access" {
-  project = "spotify-pipeline1"  # Terraform va utiliser automatiquement le Project ID via gcloud
+  project = var.project_id  # Terraform va utiliser automatiquement le Project ID via gcloud
   role    = "roles/storage.admin"
   member  = "serviceAccount:${google_service_account.sa.email}"
 }
@@ -76,21 +76,21 @@ resource "google_project_iam_member" "storage_access" {
 
 # Grants BigQuery admin permissions to the created service account
 resource "google_project_iam_member" "bigquery_access" {
-  project = "spotify-pipeline1"  # Terraform va utiliser automatiquement le Project ID via gcloud
+  project = var.project_id  # Terraform va utiliser automatiquement le Project ID via gcloud
   role    = "roles/bigquery.admin"
   member  = "serviceAccount:${google_service_account.sa.email}"
 }
 
 # Assigns specific IAM roles for BigQuery data editing to the service account
 resource "google_project_iam_member" "bigquery_data_editor" {
-  project = "spotify-pipeline1"
+  project = var.project_id
   role    = "roles/bigquery.dataEditor"
   member  = "serviceAccount:${google_service_account.sa.email}"
 }
 
 # Grants BigQuery job user permissions for running queries
 resource "google_project_iam_member" "bigquery_job_user" {
-  project = "spotify-pipeline1"
+  project = var.project_id
   role    = "roles/bigquery.jobUser"
   member  = "serviceAccount:${google_service_account.sa.email}"
 }
@@ -99,14 +99,14 @@ resource "google_project_iam_member" "bigquery_job_user" {
 resource "google_storage_bucket_iam_member" "source_viewer" {
   bucket = google_storage_bucket.spotify_bucket.name  # Assure-toi que spotify_raw_bucket est bien défini comme le bucket source
   role   = "roles/storage.objectViewer"
-  member = "serviceAccount:spotify-service-account@spotify-pipeline1.iam.gserviceaccount.com"  # Remplace par l'email du compte de service utilisé
+  member = "serviceAccount:${google_service_account.sa.email}"
 }
 
 # Assigns admin role for the service account on the destination storage bucket
 resource "google_storage_bucket_iam_member" "destination_admin" {
-  bucket = google_storage_bucket.spotify.name  # Assure-toi que spotify_playlist_bucket est bien défini comme le bucket destination
+  bucket = google_storage_bucket.spotify_bucket.name  # Assure-toi que spotify_playlist_bucket est bien défini comme le bucket destination
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:spotify-service-account@spotify-pipeline1.iam.gserviceaccount.com"  # Remplace par l'email du compte de service utilisé
+  member = "serviceAccount:${google_service_account.sa.email}"
 }
 
 # Creates a BigQuery dataset for Spotify country ranking data
