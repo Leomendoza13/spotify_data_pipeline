@@ -1,6 +1,4 @@
 #!/bin/bash
-sudo mkdir -p /opt/airflow/dags
-sudo chmod -R 755 /opt/airflow/dags
 
 # Update and install certificates
 sudo apt-get update -y

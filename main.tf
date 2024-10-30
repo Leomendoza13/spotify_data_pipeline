@@ -3,7 +3,6 @@ provider "google" {
   region  = "europe-west9" 
 }
 
-
 # Creates a Google Cloud Storage bucket for raw Spotify playlists data
 resource "google_storage_bucket" "spotify_raw_bucket" {
   name          = "spotify-raw-playlist-bucket1"
@@ -55,9 +54,47 @@ resource "google_compute_instance" "airflow_instance" {
     access_config {}
   }
 
+  metadata = {
+    ssh-keys = "${var.ssh_user}:${file(var.ssh_pub_key_path)}"
+  }
+
   # Specifies a startup script to run when the VM starts
   metadata_startup_script = file("${path.module}/scripts/startup-script.sh")
+}
 
+resource "null_resource" "create_dags_dir" {
+  depends_on = [google_compute_instance.airflow_instance]
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mkdir -p /opt/airflow/dags",
+      "sudo chmod -R 755 /opt/airflow/dags",
+      "sudo chown -R ${var.ssh_user}:${var.ssh_user} /opt/airflow/dags"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = var.ssh_user
+      private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
+      host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+    }
+  }
+}
+
+resource "null_resource" "copy_dags" {
+  depends_on = [null_resource.create_dags_dir]
+
+  provisioner "file" {
+    source      = var.dags_path
+    destination = "/opt/airflow/dags/extraction.py"
+
+    connection {
+      type        = "ssh"
+      user        = var.ssh_user
+      private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
+      host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+    }
+  }
 }
 
 # Creates another service account with permissions for data handling in GCS and BigQuery
