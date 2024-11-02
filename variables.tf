@@ -13,10 +13,10 @@ variable "ssh_pub_key_path" {
   type        = string
 }
 
-variable "dags_path" {
-  description = "Local path of dags"
+variable "source_folder" {
+  description = "Path to the local folder containing the files to upload"
   type        = string
-} #by default path = "./dags/extraction.py"
+}
 
 variable "ids_path" {
   description = "Path of ids.json for SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET"
