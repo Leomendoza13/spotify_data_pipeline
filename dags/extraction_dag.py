@@ -12,6 +12,62 @@ from airflow.operators.python_operator import PythonOperator
 
 VARIABLE_FILE = "/opt/airflow/config/ids.json"
 
+countries_data = {
+    "US": "USA",
+    "GB": "United Kingdom",
+    "FR": "France",
+    "DE": "Germany",
+    "IT": "Italy",
+    "ES": "Spain",
+    "BR": "Brazil",
+    "CA": "Canada",
+    "AU": "Australia",
+    "NL": "Netherlands",
+    "SE": "Sweden",
+    "NO": "Norway",
+    "FI": "Finland",
+    "JP": "Japan",
+    "MX": "Mexico",
+    "AR": "Argentina",
+    "CL": "Chile",
+    "CO": "Colombia",
+    "IN": "India",
+    "ID": "Indonesia",
+    "NZ": "New Zealand",
+    "ZA": "South Africa",
+    "SA": "Saudi Arabia",
+    "AE": "UAE",
+    "PH": "Philippines",
+    "TR": "Turkey",
+    "TH": "Thailand",
+    "VN": "Vietnam",
+    "SG": "Singapore",
+    "MY": "Malaysia",
+    "IE": "Ireland",
+    "PT": "Portugal",
+    "HU": "Hungary",
+    "CZ": "Czech Republic",
+    "SK": "Slovakia",
+    "DK": "Denmark",
+    "BE": "Belgium",
+    "CH": "Switzerland",
+    "AT": "Austria",
+    "GR": "Greece",
+    "RO": "Romania",
+    "BG": "Bulgaria",
+    "HR": "Croatia",
+    "RS": "Serbia",
+    "SI": "Slovenia",
+    "EE": "Estonia",
+    "LT": "Lithuania",
+    "LV": "Latvia",
+    "KR": "South Korea",
+}
+
+codes_array = list(countries_data.keys())
+countries_array = list(countries_data.values())
+countries_files_array = [country.lower() for country in countries_array]
+
 
 def load_variables():
     """
@@ -108,108 +164,6 @@ def get_top_50_country_ids(**kwargs):
         KeyError: If the expected keys are not present in the Spotify API response.
         Exception: For any other unexpected errors.
     """
-    codes_array = [
-        "US",
-        "GB",
-        "FR",
-        "DE",
-        "IT",
-        "ES",
-        "BR",
-        "CA",
-        "AU",
-        "NL",
-        "SE",
-        "NO",
-        "FI",
-        "JP",
-        "MX",
-        "AR",
-        "CL",
-        "CO",
-        "IN",
-        "ID",
-        "NZ",
-        "ZA",
-        "SA",
-        "AE",
-        "PH",
-        "TR",
-        "TH",
-        "VN",
-        "SG",
-        "MY",
-        "IE",
-        "PT",
-        "HU",
-        "CZ",
-        "SK",
-        "DK",
-        "BE",
-        "CH",
-        "AT",
-        "GR",
-        "RO",
-        "BG",
-        "HR",
-        "RS",
-        "SI",
-        "EE",
-        "LT",
-        "LV",
-        "KR",
-    ]
-    countries_array = [
-        "USA",
-        "United Kingdom",
-        "France",
-        "Germany",
-        "Italy",
-        "Spain",
-        "Brazil",
-        "Canada",
-        "Australia",
-        "Netherlands",
-        "Sweden",
-        "Norway",
-        "Finland",
-        "Japan",
-        "Mexico",
-        "Argentina",
-        "Chile",
-        "Colombia",
-        "India",
-        "Indonesia",
-        "New Zealand",
-        "South Africa",
-        "Saudi Arabia",
-        "UAE",
-        "Philippines",
-        "Turkey",
-        "Thailand",
-        "Vietnam",
-        "Singapore",
-        "Malaysia",
-        "Ireland",
-        "Portugal",
-        "Hungary",
-        "Czech Republic",
-        "Slovakia",
-        "Denmark",
-        "Belgium",
-        "Switzerland",
-        "Austria",
-        "Greece",
-        "Romania",
-        "Bulgaria",
-        "Croatia",
-        "Serbia",
-        "Slovenia",
-        "Estonia",
-        "Lithuania",
-        "Latvia",
-        "South Korea",
-    ]
     try:
         token = kwargs["ti"].xcom_pull(task_ids="get_access_token", key="access_token")
         if not token:
@@ -285,7 +239,7 @@ def save_tracks_to_gcs(**kwargs):
         )
 
         headers = {"Authorization": f"Bearer {token}"}
-        for playlist_id in playlist_ids:
+        for count, playlist_id in enumerate(playlist_ids, start=0):
             response = requests.get(
                 f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
                 headers=headers,
@@ -294,7 +248,7 @@ def save_tracks_to_gcs(**kwargs):
             response.raise_for_status()
 
             track_data = response.json()
-            filename = f"spotify_tracks_{playlist_id}.json"
+            filename = f"spotify_tracks_{countries_files_array[count]}.json"
             blob = bucket.blob(filename)
             blob.upload_from_string(
                 json.dumps(track_data), content_type="application/json"
