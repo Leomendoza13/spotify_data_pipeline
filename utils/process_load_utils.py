@@ -2,7 +2,6 @@
 File that contains functions for the processing and loading parts
 """
 
-
 from google.cloud import storage, bigquery
 import pandas as pd
 import json
@@ -94,6 +93,39 @@ def extract_data_from_blob(blob):
 def process_data():
     """
     Process raw playlist data from Google Cloud Storage (GCS) and save it as CSV files.
+
+    This function connects to a GCS bucket, retrieves JSON files containing Spotify 
+    playlist data, and processes them to extract information about tracks, albums, 
+    artists, available markets, and playlists. The extracted data is stored in 
+    separate Pandas DataFrames, which are then saved as CSV files in the local `/tmp` 
+    directory.
+
+    Steps performed:
+        1. Connect to the GCS bucket and list all JSON blobs.
+        2. Extract relevant data from each blob using the `extract_data_from_blob` function.
+        3. Collect data into lists for each table and convert these lists into DataFrames.
+        4. Apply necessary transformations (e.g., formatting release dates).
+        5. Save the DataFrames as CSV files in the local `/tmp` directory.
+
+    Outputs:
+        - CSV files saved locally:
+            - /tmp/top_tracks.csv
+            - /tmp/albums.csv
+            - /tmp/artists.csv
+            - /tmp/available_markets.csv
+            - /tmp/playlists.csv
+
+    Raises:
+        google.cloud.exceptions.GoogleCloudError: If there is an issue accessing GCS.
+        json.JSONDecodeError: If there is an issue parsing JSON data.
+        KeyError: If expected keys are missing in the JSON structure.
+        Exception: For any unexpected errors during processing.
+
+    Prints:
+        - Confirmation message when connected to GCS.
+        - Progress messages during data extraction and processing.
+        - Confirmation message when CSV files are saved.
+        - Error message if an unexpected issue occurs during processing.
     """
     try:
         client = storage.Client()
@@ -149,15 +181,29 @@ def upload_to_gcs(local_path, blob_name, bucket_name="spotify-playlist-bucket1")
 
     Raises:
         google.cloud.exceptions.GoogleCloudError: If there is an issue uploading the file to GCS.
+        FileNotFoundError: If the local file to be uploaded does not exist.
 
     Prints:
         Confirmation message when the file is successfully uploaded.
+        Error message if the upload fails.
     """
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_name)
-    blob.upload_from_filename(local_path)
-    print(f"{local_path} uploaded to {bucket_name}/{blob_name}")
+    try:
+        client = storage.Client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(blob_name)
+
+        # Check if the local file exists before attempting to upload
+        with open(local_path, 'rb') as f:
+            pass  # Just to check if the file exists
+
+        blob.upload_from_filename(local_path)
+        print(f"{local_path} uploaded to {bucket_name}/{blob_name} successfully.")
+    except FileNotFoundError:
+        print(f"Error: The local file {local_path} does not exist.")
+    except storage.exceptions.GoogleCloudError as e:
+        print(f"Error uploading {local_path} to {bucket_name}/{blob_name}: {e}")
+    except Exception as e:
+        print(f"Unexpected error during upload of {local_path} to {bucket_name}/{blob_name}: {e}")
 
 
 def upload_files_to_gcs():
@@ -175,14 +221,26 @@ def upload_files_to_gcs():
         - /tmp/playlists.csv -> GCS
 
     Prints:
-        Confirmation message when each file is uploaded.
+        Confirmation message when each file is uploaded or an error message if an upload fails.
     """
-    upload_to_gcs("/tmp/top_tracks.csv", "top_tracks.csv")
-    upload_to_gcs("/tmp/albums.csv", "albums.csv")
-    upload_to_gcs("/tmp/artists.csv", "artists.csv")
-    upload_to_gcs("/tmp/available_markets.csv", "available_markets.csv")
-    upload_to_gcs("/tmp/playlists.csv", "playlists.csv")
+    files_to_upload = [
+        ("/tmp/top_tracks.csv", "top_tracks.csv"),
+        ("/tmp/albums.csv", "albums.csv"),
+        ("/tmp/artists.csv", "artists.csv"),
+        ("/tmp/available_markets.csv", "available_markets.csv"),
+        ("/tmp/playlists.csv", "playlists.csv"),
+    ]
 
+    for local_path, blob_name in files_to_upload:
+        try:
+            upload_to_gcs(local_path, blob_name)
+            print(f"Successfully uploaded {local_path} to GCS as {blob_name}.")
+        except FileNotFoundError:
+            print(f"Error: The local file {local_path} does not exist.")
+        except storage.exceptions.GoogleCloudError as e:
+            print(f"Error uploading {local_path} to GCS as {blob_name}: {e}")
+        except Exception as e:
+            print(f"Unexpected error uploading {local_path} to GCS as {blob_name}: {e}")
 
 # 3. Load CSV to BigQuery
 def load_csv_to_bigquery(gcs_uri, table_id):
@@ -195,26 +253,32 @@ def load_csv_to_bigquery(gcs_uri, table_id):
 
     Raises:
         google.cloud.exceptions.GoogleCloudError: If there is an issue loading data into BigQuery.
-        ValueError: If the schema for the table is not defined.
 
     Prints:
         Confirmation message when the table is successfully loaded.
+        Error message if the loading fails.
     """
+    try:
+        client = bigquery.Client()
+        table_name = table_id.split(".")[-1]
+        schema = schemas.get(table_name)
 
-    client = bigquery.Client()
-    table_name = table_id.split(".")[-1]
-    schema = schemas.get(table_name)
+        if schema is None:
+            raise ValueError(f"Schema not defined for table {table_name}")
 
-    if schema is None:
-        raise ValueError(f"Schéma non défini pour la table {table_name}")
+        job_config = bigquery.LoadJobConfig(
+            source_format=bigquery.SourceFormat.CSV, skip_leading_rows=1, schema=schema
+        )
 
-    job_config = bigquery.LoadJobConfig(
-        source_format=bigquery.SourceFormat.CSV, skip_leading_rows=1, schema=schema
-    )
-
-    load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config)
-    load_job.result()  # Attend la fin du job de chargement
-    print(f"Table {table_id} loaded from {gcs_uri}")
+        load_job = client.load_table_from_uri(gcs_uri, table_id, job_config=job_config)
+        load_job.result()  # Wait for the load job to complete
+        print(f"Table {table_id} successfully loaded from {gcs_uri}")
+    except ValueError as e:
+        print(f"Error: {e}")
+    except bigquery.exceptions.GoogleCloudError as e:
+        print(f"Error loading data from {gcs_uri} to table {table_id}: {e}")
+    except Exception as e:
+        print(f"Unexpected error loading data from {gcs_uri} to table {table_id}: {e}")
 
 
 def load_data_to_bigquery():
