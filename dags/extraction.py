@@ -5,12 +5,12 @@ DAG for the extraction part of the pipeline
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
-from config.spotify_utils import (
+from config.extraction_utils import (
     load_variables,
     get_access_token,
     get_top_50_country_ids,
+    save_tracks_to_gcs
 )
-from config.gcs_utils import save_tracks_to_gcs
 
 # Define the DAG
 default_args = {
@@ -23,7 +23,7 @@ default_args = {
 }
 
 with DAG(
-    "spotify_top_50_playlist_extraction",
+    "extraction",
     default_args=default_args,
     description="Extract Top 50 Spotify playlists and save to GCS",
     schedule_interval=timedelta(days=1),
