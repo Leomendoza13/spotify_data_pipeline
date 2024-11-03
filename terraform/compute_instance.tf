@@ -45,12 +45,12 @@ resource "null_resource" "create_dags_dir" {
   }
 }
 
-resource "null_resource" "copy_ids_json" {
+resource "null_resource" "create_airflow_architecture" {
   depends_on = [null_resource.create_dags_dir]
 
   provisioner "file" {
     source      = var.ids_path
-    destination = "/opt/airflow/config/ids.json"
+    destination = "/opt/airflow/config/"
 
     connection {
       type        = "ssh"
@@ -59,20 +59,28 @@ resource "null_resource" "copy_ids_json" {
       host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
     }
   }
-}
 
-resource "null_resource" "copy_dags" {
-  depends_on = [null_resource.create_dags_dir]
+    provisioner "file" {
+        source      = var.source_folder
+        destination = "/opt/airflow/dags/"
 
-  provisioner "file" {
-    source      = var.source_folder
-    destination = "/opt/airflow/dags/"
-
-    connection {
-      type        = "ssh"
-      user        = var.ssh_user
-      private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
-      host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+        connection {
+        type        = "ssh"
+        user        = var.ssh_user
+        private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
+        host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+        }
     }
-  }
+
+    provisioner "file" {
+        source      = "../utils/"
+        destination = "/opt/airflow/config/"
+
+        connection {
+        type        = "ssh"
+        user        = var.ssh_user
+        private_key = file(replace(var.ssh_pub_key_path, ".pub", ""))
+        host        = google_compute_instance.airflow_instance.network_interface[0].access_config[0].nat_ip
+        }
+    }
 }
