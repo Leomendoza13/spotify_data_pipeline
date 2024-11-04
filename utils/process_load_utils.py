@@ -5,7 +5,9 @@ File that contains functions for the processing and loading parts
 from google.cloud import storage, bigquery
 import pandas as pd
 import json
+import re
 from config.config import schemas
+from google.api_core.exceptions import GoogleAPIError
 
 def extract_data_from_blob(blob):
     """
@@ -23,6 +25,9 @@ def extract_data_from_blob(blob):
         print(f"Processing data from {blob.name}...")
 
         top_tracks, albums, artists, available_markets, playlists = [], [], [], [], []
+
+        href = data["href"]
+        playlist_id = re.search(r"playlists/([a-zA-Z0-9]+)/tracks", href).group(1)
         
         for position, item in enumerate(data["items"], start=1):
             track, album = item["track"], item["track"]["album"]
@@ -34,6 +39,7 @@ def extract_data_from_blob(blob):
                 "added_at": item["added_at"],
                 "album_id": album["id"],
                 "artist_id": track["artists"][0]["id"],
+                "playlist_id": playlist_id,
                 "popularity": track.get("popularity", 0),
                 "preview_url": track.get("preview_url"),
                 "is_explicit": track.get("explicit", False),
@@ -66,11 +72,13 @@ def extract_data_from_blob(blob):
                     "market": market,
                 })
 
+            playlist_name = re.search(r"spotify_tracks_(.*?).json", blob.name).group(1)
+
             # Add playlist data (example data)
             playlists.append({
-                "playlist_id": "example_playlist_id",
-                "playlist_name": "Top 50",
-                "playlist_description": "Top 50 songs",
+                "playlist_id": playlist_id,
+                "playlist_name": playlist_name.capitalize(),
+                "playlist_description": "Top 50 - " + playlist_name.capitalize(),
                 "playlist_owner": "spotify",
             })
 
@@ -145,7 +153,7 @@ def process_data():
                     all_artists.extend(data["artists"])
                     all_available_markets.extend(data["available_markets"])
                     all_playlists.extend(data["playlists"])
-            break
+            
 
         # Convert lists to DataFrames
         df_top_tracks = pd.DataFrame(all_top_tracks)
@@ -154,8 +162,16 @@ def process_data():
         df_available_markets = pd.DataFrame(all_available_markets)
         df_playlists = pd.DataFrame(all_playlists)
 
+        df_albums = df_albums.drop_duplicates(subset='album_id', keep='first')
+        df_artists = df_artists.drop_duplicates(subset='artist_id', keep='first')
+        df_playlists = df_playlists.drop_duplicates(subset='playlist_id', keep='first')
+
         # Apply transformations
-        df_albums["release_date"] = df_albums["release_date"].apply(lambda x: f"{x}-01-01" if len(x) == 4 else x)
+        df_albums["release_date"] = df_albums["release_date"].apply(
+            lambda x: f"{x}-01-01" if len(x) == 4 else (f"{x}-01" if len(x) == 7 else x)
+        )   
+
+
 
         # Save data locally
         df_top_tracks.to_csv("/tmp/top_tracks.csv", index=False)
@@ -275,7 +291,7 @@ def load_csv_to_bigquery(gcs_uri, table_id):
         print(f"Table {table_id} successfully loaded from {gcs_uri}")
     except ValueError as e:
         print(f"Error: {e}")
-    except bigquery.exceptions.GoogleCloudError as e:
+    except GoogleAPIError as e:  # Utilisation de GoogleAPIError à la place
         print(f"Error loading data from {gcs_uri} to table {table_id}: {e}")
     except Exception as e:
         print(f"Unexpected error loading data from {gcs_uri} to table {table_id}: {e}")
