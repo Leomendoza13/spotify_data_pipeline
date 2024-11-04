@@ -14,6 +14,7 @@ resource "google_bigquery_table" "top_tracks" {
     { name = "added_at", type = "TIMESTAMP", mode = "NULLABLE" },
     { name = "album_id", type = "STRING", mode = "REQUIRED" },
     { name = "artist_id", type = "STRING", mode = "REQUIRED" },
+    { name = "playlist_id", type = "STRING", mode = "REQUIRED" },
     { name = "popularity", type = "INTEGER", mode = "NULLABLE" },
     { name = "preview_url", type = "STRING", mode = "NULLABLE" },
     { name = "is_explicit", type = "BOOLEAN", mode = "NULLABLE" },
