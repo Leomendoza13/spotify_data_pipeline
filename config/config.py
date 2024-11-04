@@ -63,6 +63,7 @@ schemas = {
         bigquery.SchemaField("added_at", "TIMESTAMP", mode="NULLABLE"),
         bigquery.SchemaField("album_id", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("artist_id", "STRING", mode="REQUIRED"),
+        bigquery.SchemaField("playlist_id", "STRING", mode="REQUIRED"),
         bigquery.SchemaField("popularity", "INTEGER", mode="NULLABLE"),
         bigquery.SchemaField("preview_url", "STRING", mode="NULLABLE"),
         bigquery.SchemaField("is_explicit", "BOOLEAN", mode="NULLABLE"),
