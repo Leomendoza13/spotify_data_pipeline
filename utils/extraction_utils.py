@@ -4,14 +4,17 @@ File that contains functions for the extraction
 
 import json
 import requests
+import time
 from config.config import COUNTRIES_DATA
 from config.config import VARIABLE_FILE
 from airflow.models import Variable
 from google.cloud import storage
+from google.cloud.exceptions import GoogleCloudError
 
 codes_array = list(COUNTRIES_DATA.keys())
 countries_array = list(COUNTRIES_DATA.values())
 countries_files_array = [country.lower() for country in countries_array]
+genre_cache = {}
 
 
 def load_variables():
@@ -145,31 +148,74 @@ def get_top_50_country_ids(**kwargs):
     except Exception as e:
         print(f"Unexpected error: {e}")
 
+def get_artist_genre(artist_id, token):
+    """
+    Get the genre of an artist from Spotify using the artist's ID.
+    
+    Args:
+        artist_id (str): The ID of the artist.
+        token (str): The access token for Spotify API.
+
+    Returns:
+        list: A list of genres associated with the artist.
+    """
+    if artist_id in genre_cache:
+        return genre_cache[artist_id]
+    try:
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(
+                f"https://api.spotify.com/v1/artists/{artist_id}",
+                headers=headers,
+                timeout=10,)
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 10))
+            print(f"Rate limit exceeded. Retrying after {retry_after} seconds.")
+            time.sleep(retry_after)
+            response = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers, timeout=10)
+        
+        response.raise_for_status()
+        artist_data = response.json()
+        genres = artist_data.get('genres', [])
+        genre_cache[artist_id] = genres
+        return genres
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching genres for artist {artist_id}: {e}")
+        return []
+
 def save_tracks_to_gcs(**kwargs):
     """
-    Save track data from Spotify playlists to Google Cloud Storage (GCS).
+    Save track data from Spotify playlists to Google Cloud Storage (GCS) with artist genre enrichment.
 
-    This function retrieves an access token and a list of playlist IDs from
-    XCom, then uses the Spotify API to fetch the track data for each playlist.
-    The track data is then saved as JSON files to a specified GCS bucket.
-    Prints success messages when data is uploaded and error messages when issues
-    occur.
+    This function retrieves an access token and a list of playlist IDs from XCom,
+    then queries the Spotify API to fetch the track data for each playlist. Each track's
+    associated artists are enriched with their genres before the data is saved as a JSON
+    file to a specified GCS bucket.
 
     Args:
-        **kwargs: Arbitrary keyword arguments that include `ti` for interacting
-                  with XCom (e.g., provided in an Airflow task context).
+        **kwargs: Arbitrary keyword arguments that include `ti` for interacting with XCom 
+                  (e.g., provided in an Airflow task context).
 
     Pushes:
         None
 
     Prints:
-        Confirmation messages indicating that data for each playlist has been
-        uploaded to GCS or error messages if any issue occurs.
+        Success messages indicating that data for each playlist has been successfully 
+        uploaded to GCS, as well as error messages if any issues occur.
 
     Raises:
         requests.exceptions.RequestException: If the GET request to the Spotify API fails.
         google.cloud.exceptions.GoogleCloudError: If an error occurs when interacting with GCS.
         Exception: For any other unexpected errors.
+
+    Process:
+        - Retrieves an access token and playlist IDs from XCom.
+        - Fetches track data for each playlist from the Spotify API.
+        - Enriches track data with artist genres by making additional API calls for each artist.
+        - Saves the enriched track data as a JSON file in GCS.
+
+    Example usage:
+        This function is designed to be called as part of an Airflow DAG and uses `kwargs`
+        to access the task instance (ti) for XCom interactions.
     """
     try:
         client = storage.Client()
@@ -192,15 +238,22 @@ def save_tracks_to_gcs(**kwargs):
             response.raise_for_status()
 
             track_data = response.json()
+
+            for item in track_data.get("items", []):
+                if "track" in item and "artists" in item["track"]:
+                    for artist in item['track']['artists']:
+                        genres = get_artist_genre(artist['id'], token)
+                        artist['genres'] = genres
+
             filename = f"spotify_tracks_{countries_files_array[count]}.json"
             blob = bucket.blob(filename)
             blob.upload_from_string(
                 json.dumps(track_data), content_type="application/json"
-            )
+            )           
             print(f"Data for playlist {playlist_id} uploaded to GCS as {filename}.")
     except requests.exceptions.RequestException as e:
         print(f"Error fetching track data: {e}")
-    except storage.exceptions.GoogleCloudError as e:
+    except GoogleCloudError as e:
         print(f"Error uploading data to GCS: {e}")
     except Exception as e:
         print(f"Unexpected error: {e}")

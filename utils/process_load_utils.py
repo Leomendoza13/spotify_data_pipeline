@@ -62,7 +62,7 @@ def extract_data_from_blob(blob):
                     "artist_id": artist["id"],
                     "artist_name": artist["name"],
                     "artist_url": artist["external_urls"]["spotify"],
-                    "genres": "",
+                    "genres": artist['genres'],
                 })
 
             # Add available markets data
@@ -170,8 +170,6 @@ def process_data():
         df_albums["release_date"] = df_albums["release_date"].apply(
             lambda x: f"{x}-01-01" if len(x) == 4 else (f"{x}-01" if len(x) == 7 else x)
         )   
-
-
 
         # Save data locally
         df_top_tracks.to_csv("/tmp/top_tracks.csv", index=False)
