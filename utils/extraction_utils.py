@@ -1,7 +1,8 @@
 """
 File that contains functions for the extraction
 """
-
+import logging
+from random import uniform
 import json
 import requests
 import time
@@ -148,39 +149,70 @@ def get_top_50_country_ids(**kwargs):
     except Exception as e:
         print(f"Unexpected error: {e}")
 
-def get_artist_genre(artist_id, token):
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def get_artists_genres_batch(artist_ids, token, max_retries=5):
     """
-    Get the genre of an artist from Spotify using the artist's ID.
-    
+    Get genres for a batch of artists from Spotify using their IDs with exponential backoff and logging.
+
     Args:
-        artist_id (str): The ID of the artist.
+        artist_ids (list): A list of artist IDs (up to 50).
         token (str): The access token for Spotify API.
+        max_retries (int): Maximum number of retry attempts.
 
     Returns:
-        list: A list of genres associated with the artist.
+        dict: A dictionary mapping artist IDs to their genres.
     """
-    if artist_id in genre_cache:
-        return genre_cache[artist_id]
-    try:
-        headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get(
-                f"https://api.spotify.com/v1/artists/{artist_id}",
-                headers=headers,
-                timeout=10,)
-        if response.status_code == 429:
-            retry_after = int(response.headers.get("Retry-After", 10))
-            print(f"Rate limit exceeded. Retrying after {retry_after} seconds.")
-            time.sleep(retry_after)
-            response = requests.get(f"https://api.spotify.com/v1/artists/{artist_id}", headers=headers, timeout=10)
-        
-        response.raise_for_status()
-        artist_data = response.json()
-        genres = artist_data.get('genres', [])
-        genre_cache[artist_id] = genres
-        return genres
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching genres for artist {artist_id}: {e}")
-        return []
+    if not artist_ids:
+        logging.warning("No artist IDs provided.")
+        return {}
+
+    attempt = 0
+    while attempt <= max_retries:
+        try:
+            url = f"https://api.spotify.com/v1/artists?ids={','.join(artist_ids)}"
+            headers = {"Authorization": f"Bearer {token}"}
+            response = requests.get(url, headers=headers, timeout=10)
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get("Retry-After", 10))
+                logging.warning(f"Rate limit exceeded. Retrying after {retry_after} seconds.")
+                time.sleep(retry_after)
+                attempt += 1
+                continue
+
+            response.raise_for_status()
+            artist_data = response.json()
+            artist_genres = {}
+
+            for artist in artist_data['artists']:
+                artist_id = artist['id']
+                genres = artist.get('genres', [])
+                if genres:
+                    logging.info(f"Genres found for artist {artist_id}: {genres}")
+                else:
+                    logging.info(f"No genres found for artist {artist_id}.")
+                artist_genres[artist_id] = genres
+
+            return artist_genres
+
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Error fetching genres on attempt {attempt + 1}: {e}")
+            if attempt < max_retries:
+                # Exponential backoff with jitter
+                backoff_time = 2 ** attempt + uniform(0, 1)
+                logging.info(f"Retrying in {backoff_time:.2f} seconds...")
+                time.sleep(backoff_time)
+                attempt += 1
+            else:
+                logging.critical("Maximum retry attempts reached. Exiting.")
+                return {}
+        except Exception as e:
+            logging.critical(f"Unexpected error: {e}")
+            return {}
+
+    logging.error("Failed to fetch genres after multiple attempts.")
+    return {}
 
 def save_tracks_to_gcs(**kwargs):
     """
@@ -229,6 +261,8 @@ def save_tracks_to_gcs(**kwargs):
         )
 
         headers = {"Authorization": f"Bearer {token}"}
+        genre_cache = {}
+
         for count, playlist_id in enumerate(playlist_ids, start=0):
             response = requests.get(
                 f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks",
@@ -238,12 +272,24 @@ def save_tracks_to_gcs(**kwargs):
             response.raise_for_status()
 
             track_data = response.json()
+            artist_ids = []
 
             for item in track_data.get("items", []):
                 if "track" in item and "artists" in item["track"]:
                     for artist in item['track']['artists']:
-                        genres = get_artist_genre(artist['id'], token)
-                        artist['genres'] = genres
+                        if artist['id'] not in genre_cache and artist['id'] not in artist_ids:
+                            artist_ids.append(artist['id'])
+
+            # Process artist IDs in batches of 50
+            for i in range(0, len(artist_ids), 50):
+                batch = artist_ids[i:i + 50]
+                genres_batch = get_artists_genres_batch(batch, token)
+                genre_cache.update(genres_batch)
+
+            for item in track_data.get("items", []):
+                if "track" in item and "artists" in item["track"]:
+                    for artist in item["track"]["artists"]:
+                        artist['genres'] = genre_cache.get(artist['id'], [])
 
             filename = f"spotify_tracks_{countries_files_array[count]}.json"
             blob = bucket.blob(filename)
