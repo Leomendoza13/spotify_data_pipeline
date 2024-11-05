@@ -132,14 +132,16 @@ def get_top_50_country_ids(**kwargs):
             response.raise_for_status()
 
             playlists = response.json().get("playlists", {}).get("items", [])
+            print(f"Searching for playlists for country: {countries_array[i]}")
             for playlist in playlists:
-                if (
-                    "Top 50" in playlist["name"]
-                    and countries_array[i] in playlist["name"]
-                ):
+                print(f"Found playlist: {playlist['name']}")
+                if "Top 50" in playlist["name"] and countries_array[i].lower() in playlist["name"].lower():
                     ids_array.append(playlist["id"])
+                    print('This is it')
                     break
-
+                else:
+                    print(f"No matching playlist found for {countries_array[i]}")
+                
         kwargs["ti"].xcom_push(key="playlist_ids", value=ids_array)
         print(f"Playlist IDs for {len(ids_array)} countries retrieved successfully.")
     except requests.exceptions.RequestException as e:
