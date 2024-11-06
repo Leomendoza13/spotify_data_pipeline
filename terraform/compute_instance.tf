@@ -33,7 +33,8 @@ resource "null_resource" "create_dags_dir" {
     inline = [
       "sudo mkdir -p /opt/airflow/dags /opt/airflow/config",
       "sudo chmod -R 755 /opt/airflow/dags /opt/airflow/config",
-      "sudo chown -R ${var.ssh_user}:${var.ssh_user} /opt/airflow/dags /opt/airflow/config"
+      "sudo chown -R ${var.ssh_user}:${var.ssh_user} /opt/airflow/dags /opt/airflow/config",
+      "echo '{\"PROJECT_ID\": \"${var.project_id}\"}' | sudo tee /opt/airflow/config/project_id.json"
     ]
 
     connection {
