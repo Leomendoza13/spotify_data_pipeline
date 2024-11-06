@@ -7,6 +7,7 @@ import pandas as pd
 import json
 import re
 from config.config import schemas
+from airflow.models import Variable
 from google.api_core.exceptions import GoogleAPIError
 
 def extract_data_from_blob(blob):
@@ -310,7 +311,7 @@ def load_data_to_bigquery():
     """
     try:
         bucket_path = f"gs://spotify-playlist-bucket1/"
-        project_id = "spotify-pipeline1"
+        project_id = Variable.get("PROJECT_ID")
         dataset_id = "spotify_country_rankings"
 
         load_csv_to_bigquery(f"{bucket_path}top_tracks.csv", f"{project_id}.{dataset_id}.top_tracks")

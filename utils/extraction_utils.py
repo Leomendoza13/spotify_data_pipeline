@@ -37,6 +37,10 @@ def load_variables():
             variables = json.load(f)
         for key, value in variables.items():
             Variable.set(key, value)
+        with open('/opt/airflow/config/project_id.json', encoding="utf-8") as f:
+            variable = json.load(f)
+        for key, value in variable.items():
+            Variable.set(key, value)
         print("Variables loaded successfully.")
     except FileNotFoundError:
         print("Error: The variables file was not found.")
@@ -44,7 +48,6 @@ def load_variables():
         print("Error: Failed to decode the JSON file.")
     except Exception as e:
         print(f"Unexpected error: {e}")
-
 
 def get_access_token(**kwargs):
     """
