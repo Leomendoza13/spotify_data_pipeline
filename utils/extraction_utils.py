@@ -1,5 +1,5 @@
 """
-File that contains functions for the extraction
+File that contains functions for the extraction process from Spotify API.
 """
 
 import logging

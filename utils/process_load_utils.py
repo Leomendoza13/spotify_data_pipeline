@@ -1,5 +1,5 @@
 """
-File that contains functions for the processing and loading parts
+File that contains functions for the processing and loading parts of the Spotify data pipeline.
 """
 
 from google.cloud import storage, bigquery
@@ -11,14 +11,24 @@ from google.api_core.exceptions import GoogleAPIError
 
 def extract_data_from_blob(blob):
     """
-    Extracts data from a single JSON blob and returns lists of dictionaries
-    representing records for each table.
-    
+    Extract data from a GCS JSON blob and structure it for multiple tables.
+
+    Processes JSON data from a GCS blob representing playlist tracks, 
+    creating lists of dictionaries for each target table, such as `top_tracks`,
+    `albums`, `artists`, `available_markets`, and `playlists`.
+
     Args:
-        blob (Blob): The GCS blob containing JSON data.
+        blob (Blob): The GCS blob containing JSON playlist data.
     
     Returns:
-        dict: A dictionary with lists of dictionaries for each table.
+        dict: A dictionary with structured lists of dictionaries for each table, or None if an error occurs.
+    
+    Raises:
+        json.JSONDecodeError: If the JSON data cannot be decoded.
+        KeyError: If expected fields are missing from the data structure.
+
+    Prints:
+        - Status message for each major operation and error message if an error occurs.
     """
     try:
         data = json.loads(blob.download_as_text())
@@ -100,40 +110,27 @@ def extract_data_from_blob(blob):
 
 def process_data():
     """
-    Process raw playlist data from Google Cloud Storage (GCS) and save it as CSV files.
+    Process raw Spotify playlist data from GCS and save it as CSV files locally.
 
-    This function connects to a GCS bucket, retrieves JSON files containing Spotify 
-    playlist data, and processes them to extract information about tracks, albums, 
-    artists, available markets, and playlists. The extracted data is stored in 
-    separate Pandas DataFrames, which are then saved as CSV files in the local `/tmp` 
-    directory.
+    Connects to a GCS bucket, retrieves JSON files with Spotify playlist data, 
+    extracts and transforms data for tables, and saves the processed data as 
+    CSV files in the local `/tmp` directory for further processing.
 
-    Steps performed:
-        1. Connect to the GCS bucket and list all JSON blobs.
-        2. Extract relevant data from each blob using the `extract_data_from_blob` function.
-        3. Collect data into lists for each table and convert these lists into DataFrames.
-        4. Apply necessary transformations (e.g., formatting release dates).
-        5. Save the DataFrames as CSV files in the local `/tmp` directory.
-
-    Outputs:
-        - CSV files saved locally:
-            - /tmp/top_tracks.csv
-            - /tmp/albums.csv
-            - /tmp/artists.csv
-            - /tmp/available_markets.csv
-            - /tmp/playlists.csv
+    CSV files created:
+        - /tmp/top_tracks.csv
+        - /tmp/albums.csv
+        - /tmp/artists.csv
+        - /tmp/available_markets.csv
+        - /tmp/playlists.csv
 
     Raises:
-        google.cloud.exceptions.GoogleCloudError: If there is an issue accessing GCS.
-        json.JSONDecodeError: If there is an issue parsing JSON data.
-        KeyError: If expected keys are missing in the JSON structure.
-        Exception: For any unexpected errors during processing.
+        google.cloud.exceptions.GoogleCloudError: If GCS access fails.
+        json.JSONDecodeError: If JSON data cannot be parsed.
+        KeyError: If expected fields are missing in JSON data.
+        Exception: For other unexpected errors.
 
     Prints:
-        - Confirmation message when connected to GCS.
-        - Progress messages during data extraction and processing.
-        - Confirmation message when CSV files are saved.
-        - Error message if an unexpected issue occurs during processing.
+        - Progress and confirmation messages for each step and error messages if issues occur.
     """
     try:
         client = storage.Client()
@@ -186,20 +183,19 @@ def process_data():
 # 2. Upload to GCS
 def upload_to_gcs(local_path, blob_name, bucket_name="spotify-playlist-bucket1"):
     """
-    Upload a local file to a specified Google Cloud Storage (GCS) bucket.
+    Upload a local file to a specified GCS bucket.
 
     Args:
-        local_path (str): The path to the local file to be uploaded.
-        blob_name (str): The name of the file in the GCS bucket.
-        bucket_name (str): The name of the GCS bucket (default is "spotify-playlist-bucket1").
+        local_path (str): Path to the local file to be uploaded.
+        blob_name (str): Destination filename in the GCS bucket.
+        bucket_name (str): GCS bucket name (default is "spotify-playlist-bucket1").
 
     Raises:
-        google.cloud.exceptions.GoogleCloudError: If there is an issue uploading the file to GCS.
-        FileNotFoundError: If the local file to be uploaded does not exist.
+        google.cloud.exceptions.GoogleCloudError: If file upload fails.
+        FileNotFoundError: If the local file does not exist.
 
     Prints:
-        Confirmation message when the file is successfully uploaded.
-        Error message if the upload fails.
+        - Confirmation message if the file is successfully uploaded or error message if upload fails.
     """
     try:
         client = storage.Client()
@@ -222,20 +218,20 @@ def upload_to_gcs(local_path, blob_name, bucket_name="spotify-playlist-bucket1")
 
 def upload_files_to_gcs():
     """
-    Upload all processed CSV files to the specified Google Cloud Storage (GCS) bucket.
+    Upload all processed CSV files to a GCS bucket.
 
-    This function calls `upload_to_gcs()` to upload each CSV file generated in the 
-    `process_data()` function to the GCS bucket.
+    Uses `upload_to_gcs()` to upload each CSV file created in `process_data()` 
+    to the specified GCS bucket.
 
     Files uploaded:
-        - /tmp/top_tracks.csv -> GCS
-        - /tmp/albums.csv -> GCS
-        - /tmp/artists.csv -> GCS
-        - /tmp/available_markets.csv -> GCS
-        - /tmp/playlists.csv -> GCS
+        - /tmp/top_tracks.csv
+        - /tmp/albums.csv
+        - /tmp/artists.csv
+        - /tmp/available_markets.csv
+        - /tmp/playlists.csv
 
     Prints:
-        Confirmation message when each file is uploaded or an error message if an upload fails.
+        - Success messages for each file uploaded or error messages if upload fails.
     """
     files_to_upload = [
         ("/tmp/top_tracks.csv", "top_tracks.csv"),
@@ -259,18 +255,18 @@ def upload_files_to_gcs():
 # 3. Load CSV to BigQuery
 def load_csv_to_bigquery(gcs_uri, table_id):
     """
-    Load a CSV file from Google Cloud Storage (GCS) into a BigQuery table.
+    Load a CSV file from GCS into a BigQuery table.
 
     Args:
-        gcs_uri (str): The URI of the CSV file in GCS (e.g., "gs://bucket_name/file.csv").
-        table_id (str): The ID of the BigQuery table to load data into (format: "project_id.dataset_id.table_id").
+        gcs_uri (str): URI of the CSV file in GCS.
+        table_id (str): BigQuery table ID (format: "project_id.dataset_id.table_id").
 
     Raises:
-        google.cloud.exceptions.GoogleCloudError: If there is an issue loading data into BigQuery.
+        google.cloud.exceptions.GoogleCloudError: If data load into BigQuery fails.
+        ValueError: If schema for the table is undefined.
 
     Prints:
-        Confirmation message when the table is successfully loaded.
-        Error message if the loading fails.
+        - Confirmation message if the table is successfully loaded or error message if load fails.
     """
     try:
         client = bigquery.Client()
@@ -297,10 +293,10 @@ def load_csv_to_bigquery(gcs_uri, table_id):
 
 def load_data_to_bigquery():
     """
-    Load all processed CSV files from the GCS bucket into corresponding BigQuery tables.
+    Load all processed CSV files from GCS into corresponding BigQuery tables.
 
-    This function calls `load_csv_to_bigquery()` for each CSV file to load it into 
-    a specified BigQuery table.
+    Calls `load_csv_to_bigquery()` to load each CSV file into a specific 
+    BigQuery table.
 
     BigQuery tables:
         - top_tracks
@@ -310,7 +306,7 @@ def load_data_to_bigquery():
         - playlists
 
     Prints:
-        Confirmation message when each table is successfully loaded or an error message if it fails.
+        - Success message for each table loaded or error message if loading fails.
     """
     try:
         bucket_path = f"gs://spotify-playlist-bucket1/"
