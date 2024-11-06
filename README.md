@@ -27,6 +27,8 @@ A high-level view of the data flow:
 ├── .gitignore
 ├── LICENSE
 ├── README.md
+├── assets
+│   └── Spotify-pipeline.svg
 ├── config
 │   ├── __init__.py
 │   ├── config.py
