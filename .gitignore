@@ -6,7 +6,7 @@ terraform/terraform.tfstate*
 terraform/.terraform.tfstate.lock.info
 
 # Configurations sensibles
-config/ids.json
+config/spotify_api_ids.json
 
 # Environnements virtuels
 venv/
