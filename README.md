@@ -14,7 +14,7 @@ This pipeline:
 
 A high-level view of the data flow:
 
-![Spotify Data Pipeline Architecture](architecture_diagram.png) 
+![Spotify Data Pipeline Architecture](assets/Spotify-pipeline.svg) 
 
 - **Compute Engine** runs the Airflow instance that triggers Spotify data extraction and processing tasks.
 - **Google Cloud Storage** holds raw and processed data.
