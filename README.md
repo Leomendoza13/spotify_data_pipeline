@@ -9,6 +9,16 @@ This pipeline:
 2. Processes the data and organizes it into separate tables (tracks, albums, artists, etc.).
 3. Loads the processed data into Google Cloud Storage and BigQuery for analysis.
 
+## Architecture Overview
+
+A high-level view of the data flow:
+
+![Spotify Data Pipeline Architecture](architecture_diagram.png) 
+
+- **Compute Engine** runs the Airflow instance that triggers Spotify data extraction and processing tasks.
+- **Google Cloud Storage** holds raw and processed data.
+- **BigQuery** is used to store and analyze Spotify data in structured tables.
+
 ## Project Structure
 
 ```
@@ -52,93 +62,129 @@ This pipeline:
 
 ### Step 1: Clone the Repository
 
+Clone the repository and naviguate to the project folder
+
 ```bash
-    $ git clone git@github.com:Leomendoza13/top_tracks_global_view.git
-    $ cd top_tracks_global_view
+git clone git@github.com:Leomendoza13/top_tracks_global_view.git
+cd top_tracks_global_view
 ```
 
 ### Step 2: Create your new project on Google Cloud Platform Console
 
-1. Create a [Google Cloud Platform Account](https://console.cloud.google.com/) if it not done yet. There is a free 3 months trial for new users.
+1. Create a [Google Cloud Platform Account](https://console.cloud.google.com/) if you haven’t already. New users get a free 3-month trial.
 
-2. Then go to your [console](https://console.cloud.google.com/) and create a new project on the upper left button.
+2. Go to your [console](https://console.cloud.google.com/) and create a new project using the "Create Project" button.
 
-3. After, that go to **Compute Engine** tab and enable **Compute Engine API**. Do the same for ****BigQuery API**.
+3. Go to **Compute Engine** tab and enable **Compute Engine API**. Repeat this for ****BigQuery API** to enable both services.
 
 ### Step 3: Configure GCloud CLI
 
-1. Install [GCloud CLI](https://cloud.google.com/sdk/docs/install) if it is not done yet.
+1. Install [GCloud CLI](https://cloud.google.com/sdk/docs/install) if it’s not already installed.
 
-2. Connect to your Google Cloud account:
+2. Connect to your Google Cloud account and authenticate:
 
-```bash
-    $ gcloud auth application-default login
-```
+    ```bash
+    gcloud auth application-default login
+    ```
 
-This will give you a url in your CLI, you will just have to click on it and connect with your Google Cloud account.
+This will generate a URL in your CLI, click on it, and log in to your Google Cloud account.
 
-Then set the project id with your actual existing project id you have set previously.
+3. Set the project ID:
 
-```bash
-    $ gcloud config set project [PROJECT_ID]
-```
+    ```bash
+    gcloud config set project [PROJECT_ID]
+    ```
 
 ### Step 4: Configure Spotify Credentials
 
-1. If it is not the case yet, create an account on [spotify API](https://developer.spotify.com/) and get your Spotify client credentials.
+1. Create an account on the [Spotify API](https://developer.spotify.com/) if needed, and get your Spotify client credentials.
 
-2. Open `config/spotify_api_id.json` and replace `"your_spotify_client_id"` and `"your_spotify_client_secret"` with your actual Spotify client credentials.
+2. Open `config/spotify_api_id.json` and replace `"your_spotify_client_id"` and `"your_spotify_client_secret"` with your actual Spotify client credentials:
 
-```bash
-    $ cat config/spotify_api_ids.json
-    {
-        "SPOTIFY_CLIENT_ID": "your_spotify_client_id",
-        "SPOTIFY_CLIENT_SECRET": "your_spotify_client_secret"
-    }
-```
+    ```bash
+    cat config/spotify_api_ids.json
+    ```
+
+Note: These credentials are sensitive and should be kept secure. Do not share or commit them publicly.
 
 ### Step 5: Configure Terraform Variables
 
-1. Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/gcp-get-started/install-cli) if it is not done yet.
+1. Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/gcp-get-started/install-cli) if it’s not already installed.
 
 2. Create a `terraform.tfvars` file based on `example.tfvars`:
 
-```bash
-    $ cp terraform/example.tfvars terraform/terraform.tfvars
-```
+    ```bash
+    cp terraform/example.tfvars terraform/terraform.tfvars
+    ```
 
 3. Edit `terraform/terraform.tfvars` to add your specific values:
 
-```
-   project_id       = "your-project-id"  
-   ssh_user         = "your-ssh-username"  
-   ssh_pub_key_path = "/path/to/your/ssh-key.pub"  
-   source_folder    = "../dags/"  
-   ids_path         = "../config/"
-```
+    ```
+    project_id       = "your-project-id"  
+    ssh_user         = "your-ssh-username"  
+    ssh_pub_key_path = "~/.ssh/id_rsa.pub"  
+    source_folder    = "../dags/"  
+    ids_path         = "../config/"
+    ```
 
 ### Step 6: Deploy the Infrastructure
 
-Navigate to the `terraform` folder and initialize Terraform, then apply the configuration:
+Navigate to the `terraform` folder, initialize Terraform and apply the configuration:
 
-```bash
-   $ cd terraform  
-   $ terraform init  
-   $ terraform apply
-```
+    ```bash
+    cd terraform  
+    terraform init  
+    terraform apply
+    ```
 
 Confirm the resources to be deployed. This command will set up:
 
+- A Compute Engine instance to run the extraction and processing scripts.
 - A Google Cloud Storage bucket for storing raw and processed data.
 - BigQuery tables for storing and analyzing Spotify data.
-- A Compute Engine instance to run the extraction and processing scripts.
 
-### Step 7: Run the Pipeline
+### Step 7: Actions After `terraform apply`
+
+After running the `terraform apply` command, your Google Cloud infrastructure is fully set up to support the extraction, processing, and loading of Spotify data. Here’s an overview of what happens next:
+
+1. **Infrastructure Setup**: Once `terraform apply` completes, the following resources are created:
+   - A Compute Engine instance is deployed to run the data extraction and transformation scripts.
+   - A Google Cloud Storage bucket is configured to store both raw data extracted from Spotify and processed data.
+   - BigQuery tables are created to organize and analyze Spotify data.
+
+2. **Loading Scripts and Credentials**: Using the configurations specified in `terraform.tfvars`, the folders containing your Airflow DAGs (`dags/`) and your Spotify credentials (`config/`) are copied to the Compute Engine instance.
+
+3. **Airflow Initialization**: The Compute Engine instance is configured to start Airflow and automatically load the DAGs in the `dags/` folder. Airflow is now set up to periodically trigger the Spotify data extraction and processing workflows.
+
+4. **BigQuery Analysis**: Once the data is loaded, you can use BigQuery to query and analyze the Spotify data. For example, you can create visualizations or reports on music popularity trends by country and over time.
+
+### **Step 8: ⚠️ DON'T FORGET TO `terraform destroy` WHEN IT IS DONE ⚠️**
+
+```bash
+terraform destroy
+```
+
+Running `terraform destroy` is essential after you’re done to prevent unnecessary costs. Google Cloud resources like Compute Engine instances and BigQuery storage incur charges as long as they’re active. By running `terraform destroy`, you ensure that all deployed resources are deleted, helping to avoid unexpected expenses.
 
 ### Usage
 
 - **Extract and Load Data**: Use Airflow or a similar task orchestrator to trigger the DAGs in `dags/` for periodic data extraction and loading.
-- **Analyze Data in BigQuery**: Use BigQuery SQL queries to analyze top Spotify tracks across countries.
+- **Analyze Data in BigQuery**: Use BigQuery SQL queries to analyze top Spotify tracks across countries. Here's a sample query to get started:
+```sql
+SELECT
+    ft.track_name,
+    da.artist_name,
+    dp.playlist_name,
+    ft.position
+FROM
+    `your_project_id.spotify_country_rankings.top_tracks` ft
+JOIN `your_project_id.spotify_country_rankings.artists` da ON ft.artist_id = da.artist_id
+JOIN `your_project_id.spotify_country_rankings.playlists` dp ON ft.playlist_id = dp.playlist_id
+WHERE
+    dp.playlist_name = 'Usa'
+ORDER BY
+    ft.position ASC
+```
 
 ### Contributing
 
@@ -147,3 +193,4 @@ Feel free to submit issues or pull requests. For major changes, please discuss t
 ### License
 
 This project is licensed under the MIT License.
+
