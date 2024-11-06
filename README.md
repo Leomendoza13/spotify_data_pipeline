@@ -12,33 +12,33 @@ This pipeline:
 ## Project Structure
 
 ```
-.
-├── README.md
-├── config
-│   ├── __init__.py
-│   ├── config.py
-│   └── spotify_api_ids.json
-├── dags
-│   ├── extraction.py
-│   └── process_load.py
-├── terraform
-│   ├── bigquery.tf
-│   ├── compute_instance.tf
-│   ├── example.tfvars
-│   ├── main.tf
-│   ├── provider.tf
-│   ├── scripts
-│   │   └── startup-script.sh
-│   ├── service_account.tf
-│   ├── storage.tf
-│   ├── terraform.tfstate
-│   ├── terraform.tfstate.backup
-│   ├── terraform.tfvars
-│   └── variables.tf
-└── utils
-    ├── __init__.py
-    ├── extraction_utils.py
-    └── process_load_utils.py
+    .
+    ├── README.md
+    ├── config
+    │   ├── __init__.py
+    │   ├── config.py
+    │   └── spotify_api_ids.json
+    ├── dags
+    │   ├── extraction.py
+    │   └── process_load.py
+    ├── terraform
+    │   ├── bigquery.tf
+    │   ├── compute_instance.tf
+    │   ├── example.tfvars
+    │   ├── main.tf
+    │   ├── provider.tf
+    │   ├── scripts
+    │   │   └── startup-script.sh
+    │   ├── service_account.tf
+    │   ├── storage.tf
+    │   ├── terraform.tfstate
+    │   ├── terraform.tfstate.backup
+    │   ├── terraform.tfvars
+    │   └── variables.tf
+    └── utils
+        ├── __init__.py
+        ├── extraction_utils.py
+        └── process_load_utils.py
 ```
 
 ## Prerequisites
@@ -57,7 +57,33 @@ This pipeline:
     $ cd top_tracks_global_view
 ```
 
-### Step 2: Configure Spotify Credentials
+### Step 2: Create your new project on Google Cloud Platform Console
+
+1. Create a [Google Cloud Platform Account](https://console.cloud.google.com/) if it not done yet. There is a free 3 months trial for new users.
+
+2. Then go to your [console](https://console.cloud.google.com/) and create a new project on the upper left button.
+
+3. After, that go to **Compute Engine** tab and enable **Compute Engine API**. Do the same for ****BigQuery API**.
+
+### Step 3: Configure GCloud CLI
+
+1. Install [GCloud CLI](https://cloud.google.com/sdk/docs/install) if it is not done yet.
+
+2. Connect to your Google Cloud account:
+
+```bash
+    $ gcloud auth application-default login
+```
+
+This will give you a url in your CLI, you will just have to click on it and connect with your Google Cloud account.
+
+Then set the project id with your actual existing project id you have set previously.
+
+```bash
+    $ gcloud config set project [PROJECT_ID]
+```
+
+### Step 4: Configure Spotify Credentials
 
 1. If it is not the case yet, create an account on [spotify API](https://developer.spotify.com/) and get your Spotify client credentials.
 
@@ -71,22 +97,7 @@ This pipeline:
     }
 ```
 
-### Step 3: Configure GCloud CLI
-
-1. Install [GCloud CLI](https://cloud.google.com/sdk/docs/install) if it is not done yet.
-
-2. Connect to your Google Cloud account:
-
-```bash
-    $ gcloud auth login
-    $ gcloud config set project [PROJECT_ID] #your project id
-    $ gcloud auth application-default login
-```
-
-It will open a webpage to connect to your account.
-
-
-### Step 4: Configure Terraform Variables
+### Step 5: Configure Terraform Variables
 
 1. Install [Terraform](https://developer.hashicorp.com/terraform/tutorials/gcp-get-started/install-cli) if it is not done yet.
 
@@ -106,7 +117,7 @@ It will open a webpage to connect to your account.
    ids_path         = "../config/"
 ```
 
-### Step 4: Deploy the Infrastructure
+### Step 6: Deploy the Infrastructure
 
 Navigate to the `terraform` folder and initialize Terraform, then apply the configuration:
 
@@ -122,10 +133,7 @@ Confirm the resources to be deployed. This command will set up:
 - BigQuery tables for storing and analyzing Spotify data.
 - A Compute Engine instance to run the extraction and processing scripts.
 
-### Step 5: Run the Pipeline
-
-1. Use Airflow (or the DAG setup you've configured) to run the `extraction.py` and `process_load.py` scripts.
-2. Monitor logs and data to ensure the pipeline runs as expected.
+### Step 7: Run the Pipeline
 
 ### Usage
 
