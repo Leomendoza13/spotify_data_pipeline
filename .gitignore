@@ -1,8 +1,12 @@
+# Terraform files
 terraform/terraform.tfvars
+terraform/.terraform/
 terraform/.terraform.lock.hcl
+terraform/terraform.tfstate*
 terraform/.terraform.tfstate.lock.info
-terraform/terraform.tfstate
-terraform/terraform.tfstate.backup
+
+# Configurations sensibles
 config/ids.json
+
+# Environnements virtuels
 venv/
-terraform/.terraform
