@@ -2,6 +2,9 @@
 File that contains functions for the processing and loading parts of the Spotify data pipeline.
 """
 
+# Copyright (c) 2024 Léo Mendoza
+# Licensed under the MIT License. See LICENSE file in the project root for detail
+
 from google.cloud import storage, bigquery
 import pandas as pd
 import json

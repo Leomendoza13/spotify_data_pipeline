@@ -2,6 +2,9 @@
 DAG for the extraction part of the pipeline
 """
 
+# Copyright (c) 2024 Léo Mendoza
+# Licensed under the MIT License. See LICENSE file in the project root for detail
+
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator

@@ -2,6 +2,9 @@
 DAG for the processing and loading parts of the pipeline
 """
 
+# Copyright (c) 2024 Léo Mendoza
+# Licensed under the MIT License. See LICENSE file in the project root for detail
+
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.sensors.external_task_sensor import ExternalTaskSensor

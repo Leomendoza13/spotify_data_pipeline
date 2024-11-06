@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Copyright (c) 2024 Léo Mendoza
+# Licensed under the MIT License. See LICENSE file in the project root for detail
+
 # Update and install certificates
 sudo apt-get update -y
 sudo apt-get install -y ca-certificates curl

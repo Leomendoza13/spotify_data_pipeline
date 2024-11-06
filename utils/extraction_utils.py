@@ -2,6 +2,9 @@
 File that contains functions for the extraction process from Spotify API.
 """
 
+# Copyright (c) 2024 Léo Mendoza
+# Licensed under the MIT License. See LICENSE file in the project root for detail
+
 import logging
 from random import uniform
 import json

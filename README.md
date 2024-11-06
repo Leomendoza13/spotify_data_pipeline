@@ -5,6 +5,7 @@ This project automates the extraction, processing, and loading of Spotify playli
 ## Project Overview
 
 This pipeline:
+
 1. Extracts Spotify data (Top 50 songs by country) via the Spotify API.
 2. Processes the data and organizes it into separate tables (tracks, albums, artists, etc.).
 3. Loads the processed data into Google Cloud Storage and BigQuery for analysis.
@@ -188,11 +189,11 @@ ORDER BY
 
 ### Contributing
 
-Feel free to submit issues or pull requests. For major changes, please discuss them via an issue to align with the project’s direction.
+Contributions to this project are welcome! By submitting a pull request, contributors agree to license their work under the same MIT License.
 
 ### License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License. See the LICENSE file for more details.
 
 ### Author
 
