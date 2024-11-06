@@ -5,7 +5,7 @@ project_id = "your-project-id"
 ssh_user = "your-ssh-username"
 
 # Path to the SSH public key
-ssh_pub_key_path = "/path/to/your/key.pub"
+ssh_pub_key_path = "~/.ssh/id_rsa.pub"
 
 # Folder containing the source files to upload
 source_folder = "../dags/"
