@@ -67,8 +67,8 @@ A high-level view of the data flow:
 Clone the repository and naviguate to the project folder
 
 ```bash
-git clone git@github.com:Leomendoza13/top_tracks_global_view.git
-cd top_tracks_global_view
+git clone git@github.com:Leomendoza13/spotify_data_pipeline
+cd spotify_data_pipeline
 ```
 
 ### Step 2: Create your new project on Google Cloud Platform Console
