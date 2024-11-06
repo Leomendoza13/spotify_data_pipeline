@@ -194,3 +194,8 @@ Feel free to submit issues or pull requests. For major changes, please discuss t
 
 This project is licensed under the MIT License.
 
+### Author
+
+This project was created and developed by me :) **Léo Mendoza**.
+
+Feel free to reach out for questions, contributions, or feedback at [leo.mendoza@epita.com](mailto:leo.mendoza@epita.com).
