@@ -22,33 +22,30 @@ A high-level view of the data flow:
 ## Project Structure
 
 ```
-    .
-    ├── README.md
-    ├── config
-    │   ├── __init__.py
-    │   ├── config.py
-    │   └── spotify_api_ids.json
-    ├── dags
-    │   ├── extraction.py
-    │   └── process_load.py
-    ├── terraform
-    │   ├── bigquery.tf
-    │   ├── compute_instance.tf
-    │   ├── example.tfvars
-    │   ├── main.tf
-    │   ├── provider.tf
-    │   ├── scripts
-    │   │   └── startup-script.sh
-    │   ├── service_account.tf
-    │   ├── storage.tf
-    │   ├── terraform.tfstate
-    │   ├── terraform.tfstate.backup
-    │   ├── terraform.tfvars
-    │   └── variables.tf
-    └── utils
-        ├── __init__.py
-        ├── extraction_utils.py
-        └── process_load_utils.py
+.
+├── README.md
+├── config
+│   ├── __init__.py
+│   ├── config.py
+│   └── spotify_api_ids.json
+├── dags
+│   ├── extraction.py
+│   └── process_load.py
+├── terraform
+│   ├── bigquery.tf
+│   ├── compute_instance.tf
+│   ├── example.tfvars
+│   ├── main.tf
+│   ├── provider.tf
+│   ├── scripts
+│   │   └── startup-script.sh
+│   ├── service_account.tf
+│   ├── storage.tf
+│   └── variables.tf
+└── utils
+    ├── __init__.py
+    ├── extraction_utils.py
+    └── process_load_utils.py
 ```
 
 ## Prerequisites
@@ -83,17 +80,17 @@ cd top_tracks_global_view
 
 2. Connect to your Google Cloud account and authenticate:
 
-    ```bash
-    gcloud auth application-default login
-    ```
+```bash
+gcloud auth application-default login
+```
 
 This will generate a URL in your CLI, click on it, and log in to your Google Cloud account.
 
 3. Set the project ID:
 
-    ```bash
-    gcloud config set project [PROJECT_ID]
-    ```
+```bash
+gcloud config set project [PROJECT_ID]
+```
 
 ### Step 4: Configure Spotify Credentials
 
@@ -101,9 +98,9 @@ This will generate a URL in your CLI, click on it, and log in to your Google Clo
 
 2. Open `config/spotify_api_id.json` and replace `"your_spotify_client_id"` and `"your_spotify_client_secret"` with your actual Spotify client credentials:
 
-    ```bash
-    cat config/spotify_api_ids.json
-    ```
+```bash
+cat config/spotify_api_ids.json
+```
 
 Note: These credentials are sensitive and should be kept secure. Do not share or commit them publicly.
 
@@ -113,29 +110,29 @@ Note: These credentials are sensitive and should be kept secure. Do not share or
 
 2. Create a `terraform.tfvars` file based on `example.tfvars`:
 
-    ```bash
-    cp terraform/example.tfvars terraform/terraform.tfvars
-    ```
+```bash
+cp terraform/example.tfvars terraform/terraform.tfvars
+```
 
 3. Edit `terraform/terraform.tfvars` to add your specific values:
 
-    ```
-    project_id       = "your-project-id"  
-    ssh_user         = "your-ssh-username"  
-    ssh_pub_key_path = "~/.ssh/id_rsa.pub"  
-    source_folder    = "../dags/"  
-    ids_path         = "../config/"
-    ```
+```
+project_id       = "your-project-id"  
+ssh_user         = "your-ssh-username"  
+ssh_pub_key_path = "~/.ssh/id_rsa.pub"  
+source_folder    = "../dags/"  
+ids_path         = "../config/"
+```
 
 ### Step 6: Deploy the Infrastructure
 
 Navigate to the `terraform` folder, initialize Terraform and apply the configuration:
 
-    ```bash
-    cd terraform  
-    terraform init  
-    terraform apply
-    ```
+```bash
+cd terraform  
+terraform init  
+terraform apply
+```
 
 Confirm the resources to be deployed. This command will set up:
 
@@ -156,7 +153,9 @@ After running the `terraform apply` command, your Google Cloud infrastructure is
 
 3. **Airflow Initialization**: The Compute Engine instance is configured to start Airflow and automatically load the DAGs in the `dags/` folder. Airflow is now set up to periodically trigger the Spotify data extraction and processing workflows.
 
-4. **BigQuery Analysis**: Once the data is loaded, you can use BigQuery to query and analyze the Spotify data. For example, you can create visualizations or reports on music popularity trends by country and over time.
+4. **Pipeline Triggering**: Airflow initiates the pipeline automatically according to the schedule. After Airflow starts, it may take around 5 minutes for the pipeline to fully initialize and begin processing data.
+
+5. **BigQuery Analysis**: Once the data is loaded, you can use BigQuery to query and analyze the Spotify data. For example, you can create visualizations or reports on music popularity trends by country and over time.
 
 ### **Step 8: ⚠️ DON'T FORGET TO `terraform destroy` WHEN IT IS DONE ⚠️**
 
@@ -170,6 +169,7 @@ Running `terraform destroy` is essential after you’re done to prevent unnecess
 
 - **Extract and Load Data**: Use Airflow or a similar task orchestrator to trigger the DAGs in `dags/` for periodic data extraction and loading.
 - **Analyze Data in BigQuery**: Use BigQuery SQL queries to analyze top Spotify tracks across countries. Here's a sample query to get started:
+
 ```sql
 SELECT
     ft.track_name,
