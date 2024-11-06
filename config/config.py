@@ -118,4 +118,4 @@ schemas = {
     ],
 }
 
-VARIABLE_FILE = "/opt/airflow/config/ids.json"
+VARIABLE_FILE = "/opt/airflow/config/spotify_api_ids.json"
