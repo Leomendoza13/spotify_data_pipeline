@@ -1,6 +1,7 @@
 """
 File that contains functions for the extraction
 """
+
 import logging
 from random import uniform
 import json
@@ -20,17 +21,15 @@ genre_cache = {}
 
 def load_variables():
     """
-    Load and set variables from a JSON file into the environment.
+    Load and set variables from a JSON file into Airflow's environment variables.
 
-    This function reads a JSON file specified by the global `VARIABLE_FILE`
-    constant and loads its contents. Each key-value pair in the JSON file is
-    set as an environment variable using the `Variable.set()` method. Prints a
-    success message when variables are loaded successfully and error messages
-    if the file is not found or fails to decode.
+    Reads a JSON file specified by `VARIABLE_FILE`, loading each key-value pair
+    into the Airflow environment. Prints a success message if successful,
+    and error messages if issues occur.
 
     Raises:
-        FileNotFoundError: If the specified JSON file does not exist.
-        json.JSONDecodeError: If the JSON file cannot be decoded.
+        FileNotFoundError: If the JSON file is missing.
+        json.JSONDecodeError: If the file content is not valid JSON.
         Exception: For any other unexpected errors.
     """
     try:
@@ -51,20 +50,16 @@ def get_access_token(**kwargs):
     """
     Obtain an access token from the Spotify API using client credentials.
 
-    This function sends a POST request to the Spotify Accounts service to
-    retrieve an access token for authentication. The client ID and client
-    secret are fetched from stored environment variables using the `Variable.get()`
-    method. The token is then pushed to XCom for use in downstream tasks. Prints
-    a success message when the token is obtained and an error message if the
-    request fails.
+    Sends a POST request to Spotify's Accounts service to retrieve an access
+    token, using stored client ID and secret. Pushes the token to XCom for
+    downstream tasks.
 
     Args:
-        **kwargs: Arbitrary keyword arguments that include `ti` for interacting
-                  with XCom (e.g., provided in an Airflow task context).
+        **kwargs: Keyword arguments including `ti` for Airflow XCom interaction.
 
     Raises:
         requests.exceptions.RequestException: If the POST request fails.
-        Exception: For any other unexpected errors.
+        Exception: For other unexpected errors.
     """
     try:
         headers = {"Content-Type": "application/x-www-form-urlencoded"}
@@ -91,27 +86,22 @@ def get_access_token(**kwargs):
 
 def get_top_50_country_ids(**kwargs):
     """
-    Retrieve Spotify playlist IDs for the 'Top 50' playlists from various countries.
+    Retrieve Spotify playlist IDs for 'Top 50' playlists across specified countries.
 
-    This function pulls an access token from XCom, then queries the Spotify API to
-    find playlist IDs for 'Top 50' playlists for a predefined list of country codes.
-    The function searches for playlists whose names match 'Top 50' along with the
-    specific country name and pushes the found playlist IDs to XCom for downstream
-    tasks. Prints a success message when IDs are retrieved and handles errors with
-    informative messages.
+    Pulls an access token from XCom and uses it to search Spotify's API
+    for 'Top 50' playlists based on a list of country codes. The playlist IDs
+    are then pushed to XCom.
 
     Args:
-        **kwargs: Arbitrary keyword arguments that include `ti` for interacting
-                  with XCom (e.g., provided in an Airflow task context).
+        **kwargs: Keyword arguments including `ti` for Airflow XCom interaction.
 
     Pushes:
-        XCom key `playlist_ids`: A list of playlist IDs found for the 'Top 50'
-        playlists in the specified countries.
+        XCom key `playlist_ids`: List of playlist IDs for 'Top 50' playlists.
 
     Raises:
-        requests.exceptions.RequestException: If the GET request to the Spotify API fails.
-        KeyError: If the expected keys are not present in the Spotify API response.
-        Exception: For any other unexpected errors.
+        requests.exceptions.RequestException: If the Spotify API request fails.
+        KeyError: If expected keys are missing in the response.
+        Exception: For other unexpected errors.
     """
     try:
         token = kwargs["ti"].xcom_pull(task_ids="get_access_token", key="access_token")
@@ -135,13 +125,16 @@ def get_top_50_country_ids(**kwargs):
             print(f"Searching for playlists for country: {countries_array[i]}")
             for playlist in playlists:
                 print(f"Found playlist: {playlist['name']}")
-                if "Top 50" in playlist["name"] and countries_array[i].lower() in playlist["name"].lower():
+                if (
+                    "Top 50" in playlist["name"]
+                    and countries_array[i].lower() in playlist["name"].lower()
+                ):
                     ids_array.append(playlist["id"])
-                    print('This is it')
+                    print("This is it")
                     break
                 else:
                     print(f"No matching playlist found for {countries_array[i]}")
-                
+
         kwargs["ti"].xcom_push(key="playlist_ids", value=ids_array)
         print(f"Playlist IDs for {len(ids_array)} countries retrieved successfully.")
     except requests.exceptions.RequestException as e:
@@ -151,19 +144,23 @@ def get_top_50_country_ids(**kwargs):
     except Exception as e:
         print(f"Unexpected error: {e}")
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def get_artists_genres_batch(artist_ids, token, max_retries=5):
     """
-    Get genres for a batch of artists from Spotify using their IDs with exponential backoff and logging.
+    Retrieve genres for a batch of artists from Spotify using exponential backoff.
 
     Args:
-        artist_ids (list): A list of artist IDs (up to 50).
-        token (str): The access token for Spotify API.
-        max_retries (int): Maximum number of retry attempts.
+        artist_ids (list): List of Spotify artist IDs (up to 50).
+        token (str): Access token for the Spotify API.
+        max_retries (int): Max retry attempts on failure (default is 5).
 
     Returns:
-        dict: A dictionary mapping artist IDs to their genres.
+        dict: Mapping of artist IDs to their associated genres, or empty on failure.
     """
     if not artist_ids:
         logging.warning("No artist IDs provided.")
@@ -178,7 +175,9 @@ def get_artists_genres_batch(artist_ids, token, max_retries=5):
 
             if response.status_code == 429:
                 retry_after = int(response.headers.get("Retry-After", 10))
-                logging.warning(f"Rate limit exceeded. Retrying after {retry_after} seconds.")
+                logging.warning(
+                    f"Rate limit exceeded. Retrying after {retry_after} seconds."
+                )
                 time.sleep(retry_after)
                 attempt += 1
                 continue
@@ -187,9 +186,9 @@ def get_artists_genres_batch(artist_ids, token, max_retries=5):
             artist_data = response.json()
             artist_genres = {}
 
-            for artist in artist_data['artists']:
-                artist_id = artist['id']
-                genres = artist.get('genres', [])
+            for artist in artist_data["artists"]:
+                artist_id = artist["id"]
+                genres = artist.get("genres", [])
                 if genres:
                     logging.info(f"Genres found for artist {artist_id}: {genres}")
                 else:
@@ -202,7 +201,7 @@ def get_artists_genres_batch(artist_ids, token, max_retries=5):
             logging.error(f"Error fetching genres on attempt {attempt + 1}: {e}")
             if attempt < max_retries:
                 # Exponential backoff with jitter
-                backoff_time = 2 ** attempt + uniform(0, 1)
+                backoff_time = 2**attempt + uniform(0, 1)
                 logging.info(f"Retrying in {backoff_time:.2f} seconds...")
                 time.sleep(backoff_time)
                 attempt += 1
@@ -216,40 +215,25 @@ def get_artists_genres_batch(artist_ids, token, max_retries=5):
     logging.error("Failed to fetch genres after multiple attempts.")
     return {}
 
+
 def save_tracks_to_gcs(**kwargs):
     """
-    Save track data from Spotify playlists to Google Cloud Storage (GCS) with artist genre enrichment.
+    Save Spotify track data to Google Cloud Storage (GCS) with enriched artist genre data.
 
-    This function retrieves an access token and a list of playlist IDs from XCom,
-    then queries the Spotify API to fetch the track data for each playlist. Each track's
-    associated artists are enriched with their genres before the data is saved as a JSON
-    file to a specified GCS bucket.
+    Retrieves an access token and playlist IDs from XCom, fetches track data for
+    each playlist, enriches artist data with genre information, and saves the
+    result as JSON files in GCS.
 
     Args:
-        **kwargs: Arbitrary keyword arguments that include `ti` for interacting with XCom 
-                  (e.g., provided in an Airflow task context).
+        **kwargs: Keyword arguments including `ti` for Airflow XCom interaction.
 
     Pushes:
         None
 
-    Prints:
-        Success messages indicating that data for each playlist has been successfully 
-        uploaded to GCS, as well as error messages if any issues occur.
-
     Raises:
-        requests.exceptions.RequestException: If the GET request to the Spotify API fails.
-        google.cloud.exceptions.GoogleCloudError: If an error occurs when interacting with GCS.
-        Exception: For any other unexpected errors.
-
-    Process:
-        - Retrieves an access token and playlist IDs from XCom.
-        - Fetches track data for each playlist from the Spotify API.
-        - Enriches track data with artist genres by making additional API calls for each artist.
-        - Saves the enriched track data as a JSON file in GCS.
-
-    Example usage:
-        This function is designed to be called as part of an Airflow DAG and uses `kwargs`
-        to access the task instance (ti) for XCom interactions.
+        requests.exceptions.RequestException: If the Spotify API request fails.
+        google.cloud.exceptions.GoogleCloudError: If GCS interaction fails.
+        Exception: For other unexpected errors.
     """
     try:
         client = storage.Client()
@@ -278,26 +262,29 @@ def save_tracks_to_gcs(**kwargs):
 
             for item in track_data.get("items", []):
                 if "track" in item and "artists" in item["track"]:
-                    for artist in item['track']['artists']:
-                        if artist['id'] not in genre_cache and artist['id'] not in artist_ids:
-                            artist_ids.append(artist['id'])
+                    for artist in item["track"]["artists"]:
+                        if (
+                            artist["id"] not in genre_cache
+                            and artist["id"] not in artist_ids
+                        ):
+                            artist_ids.append(artist["id"])
 
             # Process artist IDs in batches of 50
             for i in range(0, len(artist_ids), 50):
-                batch = artist_ids[i:i + 50]
+                batch = artist_ids[i : i + 50]
                 genres_batch = get_artists_genres_batch(batch, token)
                 genre_cache.update(genres_batch)
 
             for item in track_data.get("items", []):
                 if "track" in item and "artists" in item["track"]:
                     for artist in item["track"]["artists"]:
-                        artist['genres'] = genre_cache.get(artist['id'], [])
+                        artist["genres"] = genre_cache.get(artist["id"], [])
 
             filename = f"spotify_tracks_{countries_files_array[count]}.json"
             blob = bucket.blob(filename)
             blob.upload_from_string(
                 json.dumps(track_data), content_type="application/json"
-            )           
+            )
             print(f"Data for playlist {playlist_id} uploaded to GCS as {filename}.")
     except requests.exceptions.RequestException as e:
         print(f"Error fetching track data: {e}")
