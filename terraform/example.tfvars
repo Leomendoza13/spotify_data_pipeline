@@ -1,14 +1,14 @@
-# ID du projet Google Cloud
+# Google Cloud project ID
 project_id = "your-project-id"
 
-# Utilisateur SSH pour se connecter aux instances
+# SSH user for connecting to instances
 ssh_user = "your-ssh-username"
 
-# Chemin vers la clé publique SSH
-ssh_pub_key_path = "/chemin/vers/votre/cle.pub"
+# Path to the SSH public key
+ssh_pub_key_path = "/path/to/your/key.pub"
 
-# Dossier contenant les fichiers source à uploader
+# Folder containing the source files to upload
 source_folder = "../dags/"
 
-# Chemin vers le fichier JSON contenant les identifiants Spotify
+# Path to the JSON file containing Spotify credentials
 ids_path = "../config/"
