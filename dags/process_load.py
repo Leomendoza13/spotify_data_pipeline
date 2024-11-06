@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from config.process_load_utils import (
     process_data,
     upload_files_to_gcs,
-    load_data_to_bigquery
+    load_data_to_bigquery,
 )
 
 default_args = {

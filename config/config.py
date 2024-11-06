@@ -70,13 +70,13 @@ COUNTRIES_DATA = {
     "TW": "Taiwan",
     "TH": "Thailand",
     "TR": "Turkey",
-    #"AE": "United Emirates",
+    # "AE": "United Emirates",
     "GB": "United Kingdom",
     "US": "USA",
     "UA": "Ukraine",
     "UY": "Uruguay",
     "VE": "Venezuela",
-    "VN": "Vietnam"
+    "VN": "Vietnam",
 }
 
 schemas = {

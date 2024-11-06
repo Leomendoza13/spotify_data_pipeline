@@ -9,7 +9,7 @@ from config.extraction_utils import (
     load_variables,
     get_access_token,
     get_top_50_country_ids,
-    save_tracks_to_gcs
+    save_tracks_to_gcs,
 )
 
 # Define the DAG
