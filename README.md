@@ -24,6 +24,8 @@ A high-level view of the data flow:
 
 ```
 .
+├── .gitignore
+├── LICENSE
 ├── README.md
 ├── config
 │   ├── __init__.py
