@@ -56,7 +56,7 @@ A high-level view of the data flow:
 ## Prerequisites
 
 - **Google Cloud Platform** with API access to Storage, BigQuery, and Compute Engine.
-- **GCloud CLI** installed on your machine.
+- **gcloud CLI** installed on your machine.
 - **Spotify Developer Account** with access to client credentials.
 - **Terraform** installed on your machine.
 
@@ -81,7 +81,7 @@ cd spotify_data_pipeline
 
 ### Step 3: Configure GCloud CLI
 
-1. Install [GCloud CLI](https://cloud.google.com/sdk/docs/install) if it’s not already installed.
+1. Install [gcloud CLI](https://cloud.google.com/sdk/docs/install) if it’s not already installed.
 
 2. Connect to your Google Cloud account and authenticate:
 
