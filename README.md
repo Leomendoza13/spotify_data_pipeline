@@ -1,4 +1,4 @@
-# Spotify Data Pipeline Project
+# Spotify Top 50 Data Pipeline Project
 
 This project automates the extraction, processing, and loading of Spotify playlist data for global rankings using Google Cloud services and Terraform for infrastructure deployment.
 
