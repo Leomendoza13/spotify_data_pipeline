@@ -77,7 +77,7 @@ cd spotify_data_pipeline
 
 2. Go to your [console](https://console.cloud.google.com/) and create a new project using the "Create Project" button.
 
-3. Go to **Compute Engine** tab and enable **Compute Engine API**. Repeat this for ****BigQuery API** to enable both services.
+3. Go to **Compute Engine** tab and enable **Compute Engine API**. Repeat this for **BigQuery API** to enable both services.
 
 ### Step 3: Configure GCloud CLI
 
